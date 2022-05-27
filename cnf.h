@@ -9,11 +9,13 @@ typedef struct {
 
 typedef struct {
     size_t size, capacity;
+    short val;
     litteral* litts;
 }clause;
 
 typedef struct {
     size_t size, capacity;
+    short val;
     clause* clauses;
 }CNF;
 
