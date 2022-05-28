@@ -7,11 +7,11 @@
 
 static clause empty_clause();
 static void free_clause(clause c);
-static void print_clause(clause c);
 static void print_litteral(litteral l);
 static char* copy_str(char* str);
-static clause add_litteral(clause c, char name, short isnot);
+static void add_litteral(clause* c, char name, short isnot);
 static int contains_letters(char* str);
+static int in_clause(clause c, char name);
 static void free_array_str(array_str arr);
 static array_str get_words(char* str, char* delim);
 
@@ -45,6 +45,7 @@ CNF* empty_CNF() {
         perror("ERROR malloc");
         exit(1);
     }
+    cnf->vars = empty_clause();
     return cnf;
 }
 
@@ -118,6 +119,15 @@ static int contains_letters(char* str) {
     return *c != '\0';
 }
 
+static int in_clause(clause c, char name) {
+    if(c.litts == NULL)
+        return 0;
+    for(int i=0;i<c.size;i++)
+        if(c.litts[i].name == name)
+            return 1;
+    return 0;
+}
+
 static clause empty_clause() {
     clause clause = {.capacity=5, .size=0, .val=-1};
     clause.litts = malloc(sizeof(litteral) * clause.capacity);
@@ -134,6 +144,7 @@ void free_CNF(CNF* cnf) {
     for(int i=0;i<cnf->size;i++)
         free_clause(cnf->clauses[i]);
     free(cnf->clauses);
+    free_clause(cnf->vars);
     free(cnf);
 }
 
@@ -152,10 +163,13 @@ void print_CNF(CNF* cnf) {
         if(i != cnf->size-1)
             printf(", ");
     }
-    printf(" }\n");
+    printf(" }");
+    if(cnf->val != -1)
+        printf("=%d", cnf->val);
+    puts("");
 }
 
-static void print_clause(clause c) {
+void print_clause(clause c) {
     printf("{ ");
     if(c.size == 0)
         printf("empty");
@@ -165,6 +179,8 @@ static void print_clause(clause c) {
             printf(", ");
     }
     printf(" }");
+    if(c.val != -1)
+        printf("=%d", c.val);
 }
 
 static void print_litteral(litteral l) {
@@ -204,7 +220,9 @@ int add_clause(CNF* cnf, const char* exp) {
         name = isnot ? word[1] : word[0];
         if(!isalpha(name))
             continue;
-        c = add_litteral(c, name, isnot);
+        add_litteral(&c, name, isnot);
+        if(!in_clause(cnf->vars, name))
+            add_litteral(&cnf->vars, name, 0);
     }
 
     cnf->clauses[cnf->size] = c;
@@ -226,21 +244,19 @@ static char* copy_str(char* str) {
     return cpy;
 }
 
-static clause add_litteral(clause c, char name, short isnot) {
-    if(c.litts == NULL)
-        return c;
-    if(c.size == c.capacity) {
-        litteral* ptr = realloc(c.litts, c.capacity * 2 * sizeof(clause));
+static void add_litteral(clause* c, char name, short isnot) {
+    if(c->litts == NULL)
+        return;
+    if(c->size == c->capacity) {
+        litteral* ptr = realloc(c->litts, c->capacity * 2 * sizeof(clause));
         if(ptr == NULL) {
             perror("ERROR add literral malloc");
             exit(1);
         }
-        c.litts = ptr;
-        c.capacity *= 2;
+        c->litts = ptr;
+        c->capacity *= 2;
     }
 
-    c.litts[c.size] = (litteral){.name=name, .isnot=isnot, .val=-1, .eval=-1};
-    c.size++;
-
-    return c;
+    c->litts[c->size] = (litteral){.name=name, .isnot=isnot, .val=-1, .eval=-1};
+    c->size++;
 }

@@ -22,8 +22,11 @@ int main(int argc, char* argv[]) {
     eval_CNF(cnf, 'x', 1);
     print_CNF(cnf);
 
+    
+    
     litteral l = {.name='x', .isnot=0};
     printf("monotonie %c : %d\n", l.name, check_monotony(cnf, l));
+    print_clause(cnf->vars);
 
     free_CNF(cnf);
     return EXIT_SUCCESS;
@@ -39,23 +42,34 @@ static void help() {
 
 int eval_CNF(CNF* cnf, char name, short val) {
     if(cnf == NULL)
-        return;
-    for(int i=0;i<cnf->size;i++)
-        eval_clause(cnf->clauses + i, name, val);
+        return -1;
+    int final_eval = 1, eval;
+    for(int i=0;i<cnf->size;i++) {
+        eval = eval_clause(cnf->clauses + i, name, val);
+        if(final_eval == 0)
+            continue;
+        if(eval == 0 || eval == -1)
+            final_eval = eval;
+    }
+    cnf->val = final_eval;
+    
+    return cnf->val;
 }
 
 static int eval_clause(clause* c, char name, short val) {
-    if(c == NULL)
-        return;
-    int final_eval = 0, eval;
+    if(c == NULL || c->size == 0) {
+        c->val = -1;
+        return -1;
+    }
+    int final_eval = 0, eval = -1;
     for(int i=0;i<c->size;i++) {
-        if(c->litts[i].name == name) {
+        eval = c->litts[i].eval;
+        if(c->litts[i].name == name)
             eval = eval_litteral(c->litts + i, val);
-            if(final_eval == 1)
-                continue;
-            if(eval == 1 || eval == -1)
-                final_eval = eval;
-        }
+        if(final_eval == 1)
+            continue;
+        if(eval == 1 || eval == -1)
+            final_eval = eval;
     }
     c->val = final_eval;
     
@@ -64,7 +78,10 @@ static int eval_clause(clause* c, char name, short val) {
 
 static int eval_litteral(litteral* l, short val) {
     l->val = val;
-    l->eval = l->isnot ? !val : val;
+    if(val == -1)
+        l->eval = -1;
+    else
+        l->eval = l->isnot ? !val : val;
     return l->eval;
 }
 

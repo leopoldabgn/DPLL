@@ -17,6 +17,7 @@ typedef struct {
     size_t size, capacity;
     short val;
     clause* clauses;
+    clause vars; // Liste avec le nom des variables
 }CNF;
 
 typedef struct {
@@ -27,6 +28,7 @@ typedef struct {
 CNF* empty_CNF();
 void free_CNF(CNF* cnf);
 void print_CNF(CNF* cnf);
+void print_clause(clause c);
 CNF* string_to_CNF(char* str);
 int add_clause(CNF* cnf, const char* exp);
 
