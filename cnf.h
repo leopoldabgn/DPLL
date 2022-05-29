@@ -31,5 +31,9 @@ void print_CNF(CNF* cnf);
 void print_clause(clause c);
 CNF* string_to_CNF(char* str);
 int add_clause(CNF* cnf, const char* exp);
+int eval_clause(clause* c, char name, short val);
+int eval_CNF(CNF* cnf, char name, short val);
+size_t real_clause_size(clause* c);
+void print_litteral(litteral l);
 
 #endif

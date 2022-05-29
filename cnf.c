@@ -7,13 +7,13 @@
 
 static clause empty_clause();
 static void free_clause(clause c);
-static void print_litteral(litteral l);
 static char* copy_str(char* str);
 static void add_litteral(clause* c, char name, short isnot);
 static int contains_letters(char* str);
 static int in_clause(clause c, char name);
 static void free_array_str(array_str arr);
 static array_str get_words(char* str, char* delim);
+static int eval_litteral(litteral* l, short val);
 
 /*
 
@@ -183,7 +183,7 @@ void print_clause(clause c) {
         printf("=%d", c.val);
 }
 
-static void print_litteral(litteral l) {
+void print_litteral(litteral l) {
     if(l.isnot)
         printf("¬");
     printf("%c", l.name);
@@ -259,4 +259,60 @@ static void add_litteral(clause* c, char name, short isnot) {
 
     c->litts[c->size] = (litteral){.name=name, .isnot=isnot, .val=-1, .eval=-1};
     c->size++;
+}
+
+int eval_CNF(CNF* cnf, char name, short val) {
+    if(cnf == NULL)
+        return -1;
+    int final_eval = 1, eval;
+    for(int i=0;i<cnf->size;i++) {
+        eval = eval_clause(cnf->clauses + i, name, val);
+        if(final_eval == 0)
+            continue;
+        if(eval == 0 || eval == -1)
+            final_eval = eval;
+    }
+    cnf->val = final_eval;
+    
+    return cnf->val;
+}
+
+int eval_clause(clause* c, char name, short val) {
+    if(c == NULL || c->size == 0) {
+        c->val = -1;
+        return -1;
+    }
+    int final_eval = 0, eval = -1;
+    for(int i=0;i<c->size;i++) {
+        eval = c->litts[i].eval;
+        if(c->litts[i].name == name)
+            eval = eval_litteral(c->litts + i, val);
+        if(final_eval == 1)
+            continue;
+        if(eval == 1 || eval == -1)
+            final_eval = eval;
+    }
+    c->val = final_eval;
+    
+    return c->val;
+}
+
+static int eval_litteral(litteral* l, short val) {
+    l->val = val;
+    if(val == -1)
+        l->eval = -1;
+    else
+        l->eval = l->isnot ? !val : val;
+    return l->eval;
+}
+
+// Correspond au nombre de variable encore non-evaluee dans la clause
+size_t real_clause_size(clause* c) {
+    if(c == NULL)
+        return 0;
+    size_t real_size = 0;
+    for(int i=0;i<c->size;i++)
+        if(c->litts[i].val == -1)
+            real_size++;
+    return real_size;
 }
