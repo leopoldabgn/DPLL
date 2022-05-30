@@ -5,6 +5,9 @@
 
 #include "cnf.h"
 
+static char next_name = 'A';
+static char get_next_name();
+
 static clause empty_clause();
 static void free_clause(clause c);
 static char* copy_str(char* str);
@@ -14,6 +17,8 @@ static int in_clause(clause c, char name);
 static void free_array_str(array_str arr);
 static array_str get_words(char* str, char* delim);
 static int eval_litteral(litteral* l, short val);
+static CNF* copy_CNF_aux(CNF* cnf, short clean);
+static clause copy_clause_aux(clause c, short clean);
 
 /*
 
@@ -37,6 +42,7 @@ CNF* empty_CNF() {
         perror("ERROR malloc");
         exit(1);
     }
+    cnf->name = get_next_name();
     cnf->capacity = 5;
     cnf->size = 0;
     cnf->val = -1;
@@ -273,7 +279,11 @@ int eval_CNF(CNF* cnf, char name, short val) {
             final_eval = eval;
     }
     cnf->val = final_eval;
-    
+    // On met a jour la valeur dans la variable dans la liste des variables
+    litteral* l = get_litteral_by_name(cnf->vars, name);
+    if(l != NULL)
+        l->val = val;
+
     return cnf->val;
 }
 
@@ -315,4 +325,103 @@ size_t real_clause_size(clause* c) {
         if(c->litts[i].val == -1)
             real_size++;
     return real_size;
+}
+
+CNF* copy_CNF(CNF* cnf) {
+    return copy_CNF_aux(cnf, 0);
+}
+
+CNF* clean_copy_CNF(CNF* cnf) {
+    return copy_CNF_aux(cnf, 1);
+}
+
+// clean=0 -> no clean, 1-> clean
+static CNF* copy_CNF_aux(CNF* cnf, short clean) {
+    if(cnf == NULL)
+        return NULL;
+    CNF* cpy = malloc(sizeof(CNF));
+    if(cpy == NULL) {
+        perror("ERROR malloc copy_CNF\n");
+        exit(1);
+    }
+    cpy->name = get_next_name();
+    cpy->capacity = clean && cnf->val != -1 ? 5 : cnf->capacity;
+    cpy->clauses = NULL;
+    cpy->size = cnf->size;
+    cpy->val = cnf->val;
+    cpy->vars = copy_clause_aux(cnf->vars, clean);
+
+    clause* ptr = malloc(sizeof(clause) * cpy->capacity);
+    if(ptr == NULL) {
+        perror("ERROR malloc copy_CNF\n");
+        exit(1);
+    }
+
+    if(clean && cnf->val != -1) {
+        cpy->clauses = ptr;
+        cpy->size = 0;
+        return cpy;
+    }
+
+    size_t new_size = 0;
+    for(size_t i=0;i<cpy->size;i++) {
+        if(clean && cnf->clauses[i].val != -1)
+            continue;
+        ptr[new_size++] = copy_clause_aux(cnf->clauses[i], clean);
+    }
+
+    cpy->size = new_size;
+    cpy->clauses = ptr;
+
+    return cpy;
+}
+
+// clean=0 -> no clean, 1-> clean
+static clause copy_clause_aux(clause c, short clean) {
+    clause new = {.capacity=c.capacity, .litts=NULL, .size=c.size, .val=c.val};
+    if(clean && c.val != -1)
+        new.capacity = 5;
+    litteral* ptr = malloc(sizeof(litteral) * new.capacity);
+    if(ptr == NULL) {
+        perror("ERROR malloc copy_clause\n");
+        exit(1);
+    }
+    if(!clean) {
+        memmove(ptr, c.litts, sizeof(litteral) * c.size);
+    }
+    else {
+        if(c.val != -1) {
+            new.litts = ptr;
+            new.size = 0;
+            return new;
+        }
+        size_t new_size = 0;
+        for(size_t i=0;i<c.size;i++)
+            if(c.litts[i].val == -1)
+                ptr[new_size++] = c.litts[i];
+        new.size = new_size;
+    }
+    new.litts = ptr;
+    return new;
+}
+
+// Renvoie un litteral non-evalue dans la clause c
+litteral* get_litteral(clause c) {
+    for(size_t i=0;i<c.size;i++)
+        if(c.litts[i].val == -1)
+            return c.litts + i;
+    return NULL;
+}
+
+litteral* get_litteral_by_name(clause c, char name) {
+    for(size_t i=0;i<c.size;i++)
+        if(c.litts[i].name == name)
+            return c.litts + i;
+    return NULL;
+}
+
+static char get_next_name() {
+    char name = next_name;
+    next_name = next_name == 'Z' ? 'A' : next_name + 1;
+    return name;
 }

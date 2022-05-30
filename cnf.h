@@ -14,6 +14,7 @@ typedef struct {
 }clause;
 
 typedef struct {
+    char name; // (facultatif)
     size_t size, capacity;
     short val;
     clause* clauses;
@@ -35,5 +36,9 @@ int eval_clause(clause* c, char name, short val);
 int eval_CNF(CNF* cnf, char name, short val);
 size_t real_clause_size(clause* c);
 void print_litteral(litteral l);
+CNF* copy_CNF(CNF* cnf);
+CNF* clean_copy_CNF(CNF* cnf);
+litteral* get_litteral(clause c);
+litteral* get_litteral_by_name(clause c, char name);
 
 #endif

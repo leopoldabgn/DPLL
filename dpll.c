@@ -64,6 +64,8 @@ int check_monotony(CNF* cnf, litteral l) {
 static int check_monotony_clause(clause c, litteral l) {
     if(c.litts == NULL)
         return 0;
+    if(c.val != -1)
+        return 2;
     int not_in_clause = 1;
     for(int i=0;i<c.size;i++) {
         if(l.name == c.litts[i].name && c.litts[i].val == -1) {
@@ -78,7 +80,7 @@ static int check_monotony_clause(clause c, litteral l) {
 
 // Renvoie un litteral correspondant a un singleton.
 litteral* get_singleton_CNF(CNF* cnf, short isnot) {
-    if(cnf == NULL)
+    if(cnf == NULL || cnf->val != -1)
         return NULL;
     litteral* l = NULL;
     for(int i=0;i<cnf->size;i++) {
@@ -90,7 +92,7 @@ litteral* get_singleton_CNF(CNF* cnf, short isnot) {
 }
 
 static litteral* get_singleton_clause(clause c, short isnot) {
-    if(c.litts == NULL)
+    if(c.litts == NULL || c.val != -1)
         return NULL;
     int total = 0;
     litteral* l = NULL;
@@ -98,9 +100,9 @@ static litteral* get_singleton_clause(clause c, short isnot) {
         if(c.litts[i].val == -1) {
             if(total)
                 return NULL;
+            total++;
             if(isnot != c.litts[i].isnot)
                 continue;
-            total++;
             l = c.litts + i;
         }
     }
@@ -122,9 +124,9 @@ static int try_monotony(CNF* cnf, char name, short isnot) {
 int DPLL(CNF* cnf) {
     if(cnf == NULL)
         return 0;
-    printf("Soit A = ");
+    printf("Soit %c = ", cnf->name);
     print_CNF(cnf);
-    printf("\nOn cherche a resoudre DPLL(A) :\n\n");
+    printf("\nOn cherche a resoudre DPLL(%c) :\n\n", cnf->name);
 
     litteral* vars = cnf->vars.litts;
     size_t size = cnf->vars.size;
@@ -141,7 +143,7 @@ int DPLL(CNF* cnf) {
                     tmp = vars[i];
                     tmp.isnot = j;
                     print_litteral(tmp);
-                    puts(" dans A.");
+                    printf(" dans %c.\n", cnf->name);
                     print_CNF(cnf);
                     puts("");
                     vars[i].val = 1; // Peut importe la valeur tant que != -1
@@ -161,7 +163,7 @@ int DPLL(CNF* cnf) {
             if(singleton != NULL) {
                 printf("Règle %d : singleton {", (4+i));
                 print_litteral(*singleton);
-                printf("} dans A.\n");
+                printf("} dans %c.\n", cnf->name);
                 eval_CNF(cnf, singleton->name, !i);
                 print_CNF(cnf);
                 puts("");
@@ -174,20 +176,38 @@ int DPLL(CNF* cnf) {
             continue;
 
         // On applique la regle (6), derniere regle possible
-        // Soit : SAT = [x/0]A OR [x/1]A
+        // Soit : SAT = DPLL([x/0]A) OR DPLL([x/1]A)
         // On a besoin d'une fonction pour copier une cnf... TODO.
         // On applique DPLL sur copy avec x/0 et x/1 ?
         // Attention, on aura pas le detail avec les bons printf ?
         // Comment resoudre ca ?
-        break;
+        litteral* lit = get_litteral(cnf->vars);
+        if(lit == NULL)
+            break;
+        // La regle 6 peut rendre la cnf SAT. Si elle ne le fait pas,
+        // la cnf est donc considere par defaut comme non-SAT
+        cnf->val = 0; // On met donc sa valeur par defaut a 0. Pour eviter une possible boucle infini.
+        printf("Règle 6 : DPLL([%c/0]%c) OR DPLL([%c/1]%c) :\n\n", lit->name, cnf->name,
+                                                                   lit->name, cnf->name);
+        // On effectue : DPLL([x/0]A) OR DPLL([x/1]A)
+        for(int i=0;i<2;i++) {
+            printf("DPLL([%c/%d]%c) :\n\n", lit->name, i, cnf->name);
+            CNF* cp = copy_CNF(cnf); // Ou clean_copy_cnf(cnf)
+            eval_CNF(cp, lit->name, i);
+            if(DPLL(cp) > 0) {
+                cnf->val = cp->val;
+                i++;
+            }
+            free_CNF(cp);
+        }
     }
 
     if(cnf->val == 1) {
-        printf("Règle 1 : A = ∅\n");
+        printf("Règle 1 : %c = ∅\n", cnf->name);
         printf("----> SATISFAISABLE\n\n");
     }
     else if(cnf->val == 0) {
-        printf("Règle 2 : ∅ ∈ A\n");
+        printf("Règle 2 : ∅ ∈ %c\n", cnf->name);
         printf("----> NON-SATISFAISABLE\n\n");
     }
     else {
