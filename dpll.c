@@ -8,7 +8,7 @@ static int check_monotony_clause(clause c, litteral l);
 static int try_monotony(CNF* cnf, char name, short isnot);
 
 int check_monotony(CNF* cnf, litteral l);
-int DPLL(CNF* cnf);
+int DPLL(CNF* cnf, short infos);
 
 static litteral* get_singleton_clause(clause c, short isnot);
 litteral* get_singleton_CNF(CNF* cnf, short isnot);
@@ -19,9 +19,10 @@ int main(int argc, char* argv[]) {
         help();
         exit(1);
     }
+    int infos = argc >= 3 ? atoi(argv[2]) : 0;
     CNF* cnf = string_to_CNF(argv[1]);
 
-    DPLL(cnf);
+    DPLL(cnf, infos);
 
     /*
     print_CNF(cnf);
@@ -121,11 +122,11 @@ static int try_monotony(CNF* cnf, char name, short isnot) {
 }
 
 // Renvoie 1 si la CNF est satisfaisable. 0 sinon. (+ tard un arg. "int verbose").
-int DPLL(CNF* cnf) {
+int DPLL(CNF* cnf, short infos) {
     if(cnf == NULL)
         return 0;
     printf("Soit %c = ", cnf->name);
-    print_CNF(cnf);
+    print_CNF(cnf, infos);
     printf("\nOn cherche a resoudre DPLL(%c) :\n\n", cnf->name);
 
     litteral* vars = cnf->vars.litts;
@@ -142,9 +143,9 @@ int DPLL(CNF* cnf) {
                     printf("Règle 3 : monotonie de ");
                     tmp = vars[i];
                     tmp.isnot = j;
-                    print_litteral(tmp);
+                    print_litteral(tmp, 1);
                     printf(" dans %c.\n", cnf->name);
-                    print_CNF(cnf);
+                    print_CNF(cnf, infos);
                     puts("");
                     vars[i].val = 1; // Peut importe la valeur tant que != -1
                     end = 1;
@@ -162,10 +163,10 @@ int DPLL(CNF* cnf) {
             singleton = get_singleton_CNF(cnf, i);
             if(singleton != NULL) {
                 printf("Règle %d : singleton {", (4+i));
-                print_litteral(*singleton);
+                print_litteral(*singleton, infos);
                 printf("} dans %c.\n", cnf->name);
                 eval_CNF(cnf, singleton->name, !i);
-                print_CNF(cnf);
+                print_CNF(cnf, infos);
                 puts("");
                 eval_clause(&cnf->vars, singleton->name, !i);
                 end = 1;
@@ -194,7 +195,7 @@ int DPLL(CNF* cnf) {
             printf("DPLL([%c/%d]%c) :\n\n", lit->name, i, cnf->name);
             CNF* cp = copy_CNF(cnf); // Ou clean_copy_cnf(cnf)
             eval_CNF(cp, lit->name, i);
-            if(DPLL(cp) > 0) {
+            if(DPLL(cp, infos) > 0) {
                 cnf->val = cp->val;
                 i++;
             }

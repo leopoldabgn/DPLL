@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     add_clause(cnf, "{ x, y, z }");
     add_clause(cnf, "{ !x, y, !y }");
 
-    print_CNF(cnf);
+    print_CNF(cnf, 0);
 
     free_CNF(cnf);
 

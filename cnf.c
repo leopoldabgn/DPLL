@@ -158,42 +158,63 @@ static void free_clause(clause c) {
     free(c.litts);
 }
 
-void print_CNF(CNF* cnf) {
+void print_CNF(CNF* cnf, short infos) {
     if(cnf == NULL) {
         fprintf(stderr, "CNF is NULL !\n");
         return;
     }
+    if(!infos && cnf->val != -1) {
+        if(cnf->val)
+            puts(" ∅ ");
+        else
+            puts("{ ∅ }");
+        return;
+    }
     printf("{ ");
+    if(cnf->size == 0)
+        printf("empty");
+    int one = 1;
     for(int i=0;i<cnf->size;i++) {
-        print_clause(cnf->clauses[i]);
-        if(i != cnf->size-1)
+        print_clause(cnf->clauses[i], infos);
+        if(one && !infos && cnf->clauses[i].val != -1)
+            continue;
+        one = 0;
+        if(i != cnf->size-1 && (infos || cnf->clauses[i+1].val == -1))
             printf(", ");
     }
     printf(" }");
-    if(cnf->val != -1)
+    if(infos && cnf->val != -1)
         printf("=%d", cnf->val);
     puts("");
 }
 
-void print_clause(clause c) {
+void print_clause(clause c, short infos) {
+    if(!infos && c.val != -1)
+        return;
     printf("{ ");
     if(c.size == 0)
         printf("empty");
+    int one = 1;
     for(int i=0;i<c.size;i++) {
-        print_litteral(c.litts[i]);
-        if(i != c.size-1)
+        print_litteral(c.litts[i], infos);
+        if(one && !infos && c.litts[i].val != -1)
+            continue;
+        one = 0;
+        if(i != c.size-1 && (infos || c.litts[i+1].val == -1))
             printf(", ");
     }
     printf(" }");
-    if(c.val != -1)
+    if(infos && c.val != -1)
         printf("=%d", c.val);
 }
 
-void print_litteral(litteral l) {
+void print_litteral(litteral l, short infos) {
+    if(!infos && l.val != -1)
+        return;
     if(l.isnot)
         printf("¬");
     printf("%c", l.name);
-    if(l.eval != -1)
+    if(infos && l.eval != -1)
         printf("=%d", l.eval);
 }
 
